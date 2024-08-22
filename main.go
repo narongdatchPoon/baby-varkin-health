@@ -16,7 +16,7 @@ func init() {
 
 func main() {
 	router := gin.Default()
-	router.GET("/test", controllers.Test)
+	// router.GET("/", controllers.Test)
 	router.POST("/line", controllers.WebHook)
 
 	router.Run()

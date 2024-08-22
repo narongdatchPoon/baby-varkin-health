@@ -1,81 +1,6 @@
-package controllers
+package utils
 
-import (
-	"baby-varkin-health/initializers"
-	"baby-varkin-health/models"
-	"errors"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"strings"
-
-	"github.com/gin-gonic/gin"
-
-	"github.com/line/line-bot-sdk-go/linebot"
-	"github.com/line/line-bot-sdk-go/v8/linebot/messaging_api"
-	"github.com/line/line-bot-sdk-go/v8/linebot/webhook"
-)
-
-func Test(c *gin.Context) {
-	// c.JSON(http.StatusOK, gin.H{"data": "test"})
-	c.String(http.StatusOK, "Hello World")
-}
-
-func WebHook(c *gin.Context) {
-	channelSecret := os.Getenv("LINE_CHANNEL_SECRET")
-	tokenChannel := os.Getenv("LINE_CHANNEL_TOKEN")
-	bot, err := messaging_api.NewMessagingApiAPI(
-		tokenChannel,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("/callback called...")
-
-	cb, err := webhook.ParseRequest(channelSecret, c.Request)
-	if err != nil {
-		log.Printf("Cannot parse request: %+v\n", err)
-		if errors.Is(err, webhook.ErrInvalidSignature) {
-			log.Println("/WriteHeader 400")
-		} else {
-			log.Println("/WriteHeader 500")
-		}
-		return
-	}
-
-	log.Println("Handling events...")
-	for _, event := range cb.Events {
-		log.Printf("/callback called%+v...\n", event)
-
-		switch e := event.(type) {
-		case webhook.MessageEvent:
-			switch message := e.Message.(type) {
-			case webhook.TextMessageContent:
-				_, err := ReplyMessage(bot, e.ReplyToken, message.Text)
-				if err != nil {
-					log.Print("err")
-				} else {
-					log.Println("Sent text reply.")
-				}
-
-			default:
-				log.Printf("Unsupported message content: %T\n", e.Message)
-			}
-		default:
-			log.Printf("Unsupported message: %T\n", event)
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": "test"})
-}
-
-type result struct {
-	Sum int
-}
-
-func returnFlexMessage() string {
+func ReturnFlexMessage() string {
 	return `{
   "type": "carousel",
   "contents": [
@@ -209,7 +134,7 @@ func returnFlexMessage() string {
             "type": "button",
             "action": {
               "type": "message",
-              "label": "อึคึ",
+              "label": "อุนจิ",
               "text": "pampers poopoo"
             },
             "margin": "xs",
@@ -471,86 +396,4 @@ func returnFlexMessage() string {
     }
   ]
 }`
-}
-
-func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg string) (*messaging_api.ReplyMessageResponse, error) {
-	if userMsg == "Menu" {
-		json := returnFlexMessage()
-		//Unmarshal JSON
-		flexContainer, err := linebot.UnmarshalFlexMessageJSON([]byte(json))
-		if err != nil {
-			log.Println(err)
-		}
-		// New Flex Message
-		flexMessage := linebot.NewFlexMessage("FlexWithJSON", flexContainer)
-
-		// Wrap the Flex Message
-		flexMessageWrapper := &FlexMessageWrapper{FlexMessage: flexMessage}
-
-		// Reply Message
-		replyMessageResponse, err := bot.ReplyMessage(
-			&messaging_api.ReplyMessageRequest{
-				ReplyToken: replyToken,
-				Messages: []messaging_api.MessageInterface{
-					flexMessageWrapper,
-				},
-			})
-
-		//  flexMessage).Do()
-		if err != nil {
-			log.Println(err)
-		}
-		return replyMessageResponse, err
-
-	} else if strings.Contains(userMsg, "drinkmilk") || strings.Contains(userMsg, "pampers") || strings.Contains(userMsg, "sleep") || strings.Contains(userMsg, "wakeup") || strings.Contains(userMsg, "takeabath") || strings.Contains(userMsg, "pumpmilk") || strings.Contains(userMsg, "milkmilk") {
-		parts := strings.Split(userMsg, " ")
-		activity := models.Activities{
-			ActityType:  parts[0],
-			ActityValue: parts[1],
-		}
-		// initializers.DB.Exec("DEALLOCATE ALL")
-		// initializers.DB.Create(&activity)
-		activity.Save()
-
-		// log.Println(userMsg)
-
-		// if err != nil {
-		// 	return ReplyErrorMessage(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
-		// }
-		return ReplyErrorMessage(bot, replyToken, "น้องวารับทราบ")
-	} else if userMsg == "Summary" {
-		var sumDrinkMilk result
-		// initializers.DB.Exec("DEALLOCATE ALL")
-		initializers.DB.Model(&models.Activities{}).Select("SUM(CAST(actity_value AS INTEGER)) as Sum").Where("actity_type = ?", "drinkmilk").Find(&sumDrinkMilk)
-		// SELECT name, sum(age) as total FROM `users` WHERE name LIKE "group%" GROUP BY `name` LIMIT 1
-
-		log.Println("drinkmilk===>", sumDrinkMilk)
-		var TestSend = fmt.Sprintf(`น้องวารับทราบ 
-ดื่มนมไปแล้ว %d ออนซ์`, sumDrinkMilk)
-		return ReplyErrorMessage(bot, replyToken, TestSend)
-	} else {
-		return ReplyErrorMessage(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
-	}
-
-}
-
-func ReplyErrorMessage(bot *messaging_api.MessagingApiAPI, replyToken string, message string) (*messaging_api.ReplyMessageResponse, error) {
-	replyMessageResponse, err := bot.ReplyMessage(
-		&messaging_api.ReplyMessageRequest{
-			ReplyToken: replyToken,
-			Messages: []messaging_api.MessageInterface{
-				messaging_api.TextMessage{
-					Text: message,
-				},
-			},
-		})
-	return replyMessageResponse, err
-}
-
-type FlexMessageWrapper struct {
-	*linebot.FlexMessage
-}
-
-func (f *FlexMessageWrapper) GetType() string {
-	return "flex"
 }
