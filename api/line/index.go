@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
+
 	"net/http"
 	"os"
 	"strings"
@@ -96,110 +98,117 @@ func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg
 		}
 		return replyMessageResponse, err
 
-	} else if strings.Contains(userMsg, "drinkmilk") || strings.Contains(userMsg, "pampers") || strings.Contains(userMsg, "sleep") || strings.Contains(userMsg, "wakeup") || strings.Contains(userMsg, "takeabath") || strings.Contains(userMsg, "pumpmilk") || strings.Contains(userMsg, "milkmilk") {
+	} else if strings.Contains(userMsg, "summarysum") {
+		parts := strings.Split(userMsg, " ")
+		loc, _ := time.LoadLocation("Asia/Bangkok")
+		now := time.Now().In(loc)
+		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+		// startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+		// startOfDay := time.Now().UTC().Truncate(24 * time.Hour)
+		endOfDay := startOfDay.Add(24 * time.Hour)
+
+		startOfMonth := time.Now().UTC().Truncate(24 * 30 * time.Hour)
+		endOfMonth := startOfDay.Add(24 * 30 * time.Hour)
+		today := utils.ConvertDateTime(startOfDay, "2006-01-02")
+		if parts[1] == "history-all" {
+			stringSummary := utils.HistoryAll(today)
+			return Reply(bot, replyToken, stringSummary)
+		} else if parts[1] == "drinkmilk" {
+			Textsummarysum := utils.DrinkMilk(startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if parts[1] == "diaper" {
+			Textsummarysum := utils.Diaper(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if parts[1] == "history-diaper" {
+			Textsummarysum := utils.HistoryDiaper(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if parts[1] == "sleep-daily" {
+			Textsummarysum := utils.SleepDaily(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if strings.Contains(userMsg, "takeabath") {
+			Textsummarysum := utils.Takeabath(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if strings.Contains(userMsg, "pumpmilk-daily") {
+			Textsummarysum := utils.PumpmilkDaily(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if strings.Contains(userMsg, "history-pumpmilk") {
+			Textsummarysum := utils.HistoryPumpmilk(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else if strings.Contains(userMsg, "stock") {
+			Textsummarysum := utils.Stockmilk(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
+			return Reply(bot, replyToken, Textsummarysum)
+		} else {
+			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
+		}
+
+	} else if strings.Contains(userMsg, "drinkmilk") ||
+		strings.Contains(userMsg, "pampers") ||
+		strings.Contains(userMsg, "sleep") ||
+		strings.Contains(userMsg, "wakeup") ||
+		strings.Contains(userMsg, "takeabath") ||
+		strings.Contains(userMsg, "pumpmilk") ||
+		strings.Contains(userMsg, "milkmilk") ||
+		strings.Contains(userMsg, "stockmilk") {
 		parts := strings.Split(userMsg, " ")
 		activity := models.Activities{
 			ActityType:  parts[0],
 			ActityValue: parts[1],
+			ReplyToken:  replyToken,
 		}
-		activity.Save()
-		return Reply(bot, replyToken, "น้องวารับทราบ")
+		initializers.DB.Create(&activity)
+		// activity.Save()
+		if strings.Contains(userMsg, "stockmilk") {
+			var stockmilkCount resultCount
+			initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("actity_type = ?", "stockmilk").Find(&stockmilkCount)
+			lot := math.Ceil(float64(stockmilkCount.Count) / 10)
+			no := stockmilkCount.Count % 10
+			stringReturn := fmt.Sprintf("น้องวารับทราบ\n %.0f/%d LOT:%.0f No. %d", lot, no, lot, no)
+			// 1 No. 5
+
+			return Reply(bot, replyToken, stringReturn)
+		} else {
+			return Reply(bot, replyToken, "น้องวารับทราบ")
+		}
+
 	} else if userMsg == "Summary" {
-		startOfDay := time.Now().UTC().Truncate(24 * time.Hour)
-		endOfDay := startOfDay.Add(24 * time.Hour)
-
-		var sumDrinkMilk resultSum
-		initializers.DB.Model(&models.Activities{}).Select("SUM(CAST(actity_value AS INTEGER)) as Sum").Where("created_at >= ? AND created_at < ? and actity_type = ?", startOfDay, endOfDay, "drinkmilk").Find(&sumDrinkMilk)
-
-		var countPee resultCount
-		initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("created_at >= ? AND created_at < ? and actity_type = ? and actity_value = ?", startOfDay, endOfDay, "pampers", "pee").Find(&countPee)
-
-		var countPooPoo resultCount
-		initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("created_at >= ? AND created_at < ? and actity_type = ? and actity_value = ?", startOfDay, endOfDay, "pampers", "poopoo").Find(&countPooPoo)
-
-		var lastDrinkMilk models.Activities
-		initializers.DB.Where("actity_type = ?", "drinkmilk").Order("created_at desc").First(&lastDrinkMilk)
-
-		var lastPee models.Activities
-		initializers.DB.Where("actity_type = ? and actity_value = ?", "pampers", "pee").Order("created_at desc").First(&lastPee)
-
-		var lastPoo models.Activities
-		initializers.DB.Where("actity_type = ? and actity_value = ?", "pampers", "poopoo").Order("created_at desc").First(&lastPoo)
-
-		var sleepActivity, wakeUpActivity models.Activities
-		strSleep := ""
-
-		err := initializers.DB.Where("actity_type = ?", "sleep").Order("created_at desc").First(&sleepActivity).Error
-		err1 := initializers.DB.Where("actity_type = ?", "wakeup").Order("created_at desc").First(&wakeUpActivity).Error
-
-		if err != nil || err1 != nil {
-			strSleep = fmt.Sprintf(`ไม่มีข้อมูลการนอน`)
-		} else {
-			duration := wakeUpActivity.CreatedAt.Sub(sleepActivity.CreatedAt)
-			hours := int(duration.Hours())
-			min := int(duration.Minutes()) % 60
-			startTime := convertDateTime(sleepActivity.CreatedAt, "15:04")
-			endTime := convertDateTime(wakeUpActivity.CreatedAt, "15:04")
-			strSleep = fmt.Sprintf(`นอนตั้งแต่ %s - %s 
-💤 %d ชม. %d นาที`, startTime, endTime, hours, min)
+		json := utils.FlexMessageSummary()
+		//Unmarshal JSON
+		flexContainer, err := linebot.UnmarshalFlexMessageJSON([]byte(json))
+		if err != nil {
+			log.Println(err)
 		}
+		// New Flex Message
+		flexMessage := linebot.NewFlexMessage("FlexWithJSON", flexContainer)
 
-		// err2 := initializers.DB.Where("actity_type = ?", "takeabath").Order("created_at desc").First(&wakeUpActivity).Error
-		var takeabathCount resultCount
-		initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("created_at >= ? AND created_at < ? and actity_type = ? and actity_value = ?", startOfDay, endOfDay, "takeabath", "1").Find(&takeabathCount)
+		// Wrap the Flex Message
+		flexMessageWrapper := &FlexMessageWrapper{FlexMessage: flexMessage}
 
-		var sumPumpMilk resultSum
-		initializers.DB.Model(&models.Activities{}).Select("SUM(CAST(actity_value AS INTEGER)) as Sum").Where("created_at >= ? AND created_at < ? and actity_type = ?", startOfDay, endOfDay, "pumpmilk").Find(&sumPumpMilk)
+		// Reply Message
+		replyMessageResponse, err := bot.ReplyMessage(
+			&messaging_api.ReplyMessageRequest{
+				ReplyToken: replyToken,
+				Messages: []messaging_api.MessageInterface{
+					flexMessageWrapper,
+				},
+			})
 
-		var countPumpMilk resultCount
-		initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("created_at >= ? AND created_at < ? and actity_type = ?", startOfDay, endOfDay, "pumpmilk").Find(&countPumpMilk)
-
-		var countMilkMilk resultCount
-		initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("created_at >= ? AND created_at < ? and actity_type = ?", startOfDay, endOfDay, "milkmilk").Find(&countMilkMilk)
-
-		today := convertDateTime(startOfDay, "2006-01-02")
-		milkTime := convertDateTime(lastDrinkMilk.CreatedAt, "2006-01-02 15:04")
-		peeTime := convertDateTime(lastPee.CreatedAt, "2006-01-02 15:04")
-		pooTime := convertDateTime(lastPoo.CreatedAt, "2006-01-02 15:04")
-		var avgPumpMilk string
-		_avgPumpMilk := float64(sumPumpMilk.Sum) / float64(countPumpMilk.Count)
-		if math.IsNaN(_avgPumpMilk) {
-			avgPumpMilk = "0"
-		} else {
-			fmt.Sprintf("%.2f", _avgPumpMilk)
+		//  flexMessage).Do()
+		if err != nil {
+			log.Println(err)
 		}
-
-		var TextSummary = fmt.Sprintf(`----------------------
-สรุป ของ น้องวา !!! 
-วันที่ %s
-----------🧑‍🍼----------
-ดื่มนม ครั้งล่าสุด 🧑‍🍼
-เวลา %s ไปแล้ว %s ออนซ์
-🍼รวม %d ออนซ์
-----------🚽----------
-ซิ่งฉ่อง ครั้งล่าสุด 🚽
-%s 
-ซิ่งฉ่องรวม %d ครั้ง
-----------💩----------
-อุนจิ ครั้งล่าสุด 💩
-%s
-อุนจิรวม %d ครั้ง
-----------💤----------
-%s
-----------🛁----------
-วันนี้อาบน้ำ🛁 %d ครั้ง
-----------🍼----------
-รวม น้ำนมที่ปั้ม วันนี้
-🍼 %d ออนซ์
-🍼 %d ครั้ง
-เฉลี่ยน %s ออนซ์
-----------🤰----------
-เข้าเต้า %d ครั้ง
-----------------------
-----------------------`, today, milkTime, lastDrinkMilk.ActityValue, sumDrinkMilk.Sum, peeTime, countPee.Count, pooTime, countPooPoo.Count, strSleep, takeabathCount.Count, sumPumpMilk.Sum, countPumpMilk.Count, avgPumpMilk, countMilkMilk.Count)
-		return Reply(bot, replyToken, TextSummary)
+		return replyMessageResponse, err
 	} else {
-		return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
+		parts := strings.Split(userMsg, " ")
+		act_id, _ := strconv.Atoi(parts[1])
+		if parts[0] == "del" {
+
+			initializers.DB.Delete(&models.Activities{}, act_id)
+
+			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ลบข้อมูลให้แล้วงับบบ")
+		} else {
+
+			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ---")
+		}
 	}
 }
 
@@ -216,6 +225,9 @@ func Reply(bot *messaging_api.MessagingApiAPI, replyToken string, message string
 	return replyMessageResponse, err
 }
 
+type resultSumFloat struct {
+	Sum float32
+}
 type resultSum struct {
 	Sum int
 }
@@ -229,14 +241,6 @@ type FlexMessageWrapper struct {
 
 func (f *FlexMessageWrapper) GetType() string {
 	return "flex"
-}
-func convertDateTime(valTime time.Time, format string) string {
-	loc, err := time.LoadLocation("Asia/Bangkok")
-	if err != nil {
-		fmt.Println("Error loading location:", err)
-		return ""
-	}
-	return valTime.In(loc).Format(format)
 }
 
 func Main() {

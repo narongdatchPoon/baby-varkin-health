@@ -21,6 +21,7 @@ type Activities struct {
 	ID          uint   `json:"id" gorm:"primary_key"`
 	ActityType  string `json:"actity_type"`
 	ActityValue string `json:"actity_value"`
+	ReplyToken  string `json:"reply_token" gorm:"unique"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
