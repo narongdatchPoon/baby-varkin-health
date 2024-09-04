@@ -5,9 +5,7 @@ import (
 	"baby-varkin-health/models"
 	"baby-varkin-health/utils"
 	"errors"
-	"fmt"
 	"log"
-	"math"
 	"strconv"
 
 	"net/http"
@@ -71,42 +69,22 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg string) (*messaging_api.ReplyMessageResponse, error) {
 	if userMsg == "Menu" {
+
 		json := utils.ReturnFlexMessage()
-		//Unmarshal JSON
-		flexContainer, err := linebot.UnmarshalFlexMessageJSON([]byte(json))
-		if err != nil {
-			log.Println(err)
-		}
-		// New Flex Message
-		flexMessage := linebot.NewFlexMessage("FlexWithJSON", flexContainer)
+		return utils.ReplyFlexMessage(json, bot, replyToken)
 
-		// Wrap the Flex Message
-		flexMessageWrapper := &FlexMessageWrapper{FlexMessage: flexMessage}
+	} else if userMsg == "Summary" {
 
-		// Reply Message
-		replyMessageResponse, err := bot.ReplyMessage(
-			&messaging_api.ReplyMessageRequest{
-				ReplyToken: replyToken,
-				Messages: []messaging_api.MessageInterface{
-					flexMessageWrapper,
-				},
-			})
-
-		//  flexMessage).Do()
-		if err != nil {
-			log.Println(err)
-		}
-		return replyMessageResponse, err
+		json := utils.FlexMessageSummary()
+		return utils.ReplyFlexMessage(json, bot, replyToken)
 
 	} else if strings.Contains(userMsg, "summarysum") {
+
 		parts := strings.Split(userMsg, " ")
 		loc, _ := time.LoadLocation("Asia/Bangkok")
 		now := time.Now().In(loc)
 		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-		// startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-		// startOfDay := time.Now().UTC().Truncate(24 * time.Hour)
 		endOfDay := startOfDay.Add(24 * time.Hour)
-
 		startOfMonth := time.Now().UTC().Truncate(24 * 30 * time.Hour)
 		endOfMonth := startOfDay.Add(24 * 30 * time.Hour)
 		today := utils.ConvertDateTime(startOfDay, "2006-01-02")
@@ -141,6 +119,11 @@ func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg
 			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
 		}
 
+	} else if strings.Contains(userMsg, "datetimepicker") {
+
+		json := utils.DateTimePicker()
+		return utils.ReplyFlexMessage(json, bot, replyToken)
+
 	} else if strings.Contains(userMsg, "drinkmilk") ||
 		strings.Contains(userMsg, "pampers") ||
 		strings.Contains(userMsg, "sleep") ||
@@ -156,47 +139,8 @@ func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg
 			ReplyToken:  replyToken,
 		}
 		initializers.DB.Create(&activity)
-		// activity.Save()
-		if strings.Contains(userMsg, "stockmilk") {
-			var stockmilkCount resultCount
-			initializers.DB.Model(&models.Activities{}).Select("Count(actity_value) as Count").Where("actity_type = ?", "stockmilk").Find(&stockmilkCount)
-			lot := math.Ceil(float64(stockmilkCount.Count) / 10)
-			no := stockmilkCount.Count % 10
-			stringReturn := fmt.Sprintf("น้องวารับทราบ\n %.0f/%d LOT:%.0f No. %d", lot, no, lot, no)
-			// 1 No. 5
-
-			return Reply(bot, replyToken, stringReturn)
-		} else {
-			return Reply(bot, replyToken, "น้องวารับทราบ")
-		}
-
-	} else if userMsg == "Summary" {
-		json := utils.FlexMessageSummary()
-		//Unmarshal JSON
-		flexContainer, err := linebot.UnmarshalFlexMessageJSON([]byte(json))
-		if err != nil {
-			log.Println(err)
-		}
-		// New Flex Message
-		flexMessage := linebot.NewFlexMessage("FlexWithJSON", flexContainer)
-
-		// Wrap the Flex Message
-		flexMessageWrapper := &FlexMessageWrapper{FlexMessage: flexMessage}
-
-		// Reply Message
-		replyMessageResponse, err := bot.ReplyMessage(
-			&messaging_api.ReplyMessageRequest{
-				ReplyToken: replyToken,
-				Messages: []messaging_api.MessageInterface{
-					flexMessageWrapper,
-				},
-			})
-
-		//  flexMessage).Do()
-		if err != nil {
-			log.Println(err)
-		}
-		return replyMessageResponse, err
+		stringReturn := utils.Recorod(activity, userMsg, replyToken)
+		return Reply(bot, replyToken, stringReturn)
 	} else {
 		parts := strings.Split(userMsg, " ")
 		act_id, _ := strconv.Atoi(parts[1])

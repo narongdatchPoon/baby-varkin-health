@@ -1,5 +1,12 @@
 package utils
 
+import (
+	"log"
+
+	"github.com/line/line-bot-sdk-go/linebot"
+	"github.com/line/line-bot-sdk-go/v8/linebot/messaging_api"
+)
+
 func ReturnFlexMessage() string {
 	return `{
   "type": "carousel",
@@ -387,7 +394,7 @@ func ReturnFlexMessage() string {
             "type": "button",
             "action": {
               "type": "message",
-              "label": " ขาว",
+              "label": " ขวา",
               "text": "milkmilk right"
             },
             "margin": "xs",
@@ -530,15 +537,15 @@ func GetIcon(activity_type string, activity_value string) string {
 	} else if activity_type == "sleep" {
 		icon = "💤 sleep"
 	} else if activity_type == "wakeup" {
-		icon = "💤 wake up"
+		icon = "💤 wake"
 	} else if activity_type == "takeabath" {
 		icon = "🛁"
 	} else if activity_type == "pumpmilk" {
-		icon = "⛽ 🍼 " + activity_value
+		icon = "⛽ " + activity_value
 	} else if activity_type == "milkmilk" {
-		icon = "🤰 🍼"
+		icon = "🤱🏻"
 	} else if activity_type == "stockmilk" {
-		icon = "🥶  🍼  📦 " + activity_value
+		icon = "📦 " + activity_value
 	} else {
 		icon = activity_type
 	}
@@ -852,4 +859,56 @@ func FlexMessageSummary() string {
     }
   ]
 }`
+}
+
+func DateTimePicker() string {
+	return `{
+  "type": "action",
+  "contents": [
+    {
+      "type": "datetimepicker",
+      "label": "Select date",
+      "data": "storeId=12345",
+      "mode": "datetime",
+      "initial": "2017-12-25t00:00",
+      "max": "2018-01-24t23:59",
+      "min": "2017-12-25t00:00"
+    }
+  ]
+}`
+}
+
+type FlexMessageWrapper struct {
+	*linebot.FlexMessage
+}
+
+func (f *FlexMessageWrapper) GetType() string {
+	return "flex"
+}
+
+func ReplyFlexMessage(json string, bot *messaging_api.MessagingApiAPI, replyToken string) (*messaging_api.ReplyMessageResponse, error) {
+	flexContainer, err := linebot.UnmarshalFlexMessageJSON([]byte(json))
+	if err != nil {
+		log.Println(err)
+	}
+	// New Flex Message
+	flexMessage := linebot.NewFlexMessage("FlexWithJSON", flexContainer)
+
+	// Wrap the Flex Message
+	flexMessageWrapper := &FlexMessageWrapper{FlexMessage: flexMessage}
+
+	// Reply Message
+	replyMessageResponse, err := bot.ReplyMessage(
+		&messaging_api.ReplyMessageRequest{
+			ReplyToken: replyToken,
+			Messages: []messaging_api.MessageInterface{
+				flexMessageWrapper,
+			},
+		})
+
+	//  flexMessage).Do()
+	if err != nil {
+		log.Println(err)
+	}
+	return replyMessageResponse, err
 }
