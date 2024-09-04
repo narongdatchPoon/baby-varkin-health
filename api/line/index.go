@@ -45,6 +45,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	// linebot.EventTypePostback:
 	for _, event := range cb.Events {
 		switch e := event.(type) {
 		case webhook.MessageEvent:
@@ -60,6 +61,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			default:
 				log.Printf("Unsupported message content: %T\n", e.Message)
 			}
+		case webhook.PostbackEvent:
+			utils.HandlePostbackEvent(e, bot)
 		default:
 			log.Printf("Unsupported message: %T\n", event)
 		}
@@ -90,39 +93,34 @@ func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg
 		today := utils.ConvertDateTime(startOfDay, "2006-01-02")
 		if parts[1] == "history-all" {
 			stringSummary := utils.HistoryAll(today)
-			return Reply(bot, replyToken, stringSummary)
+			return utils.Reply(bot, replyToken, stringSummary)
 		} else if parts[1] == "drinkmilk" {
 			Textsummarysum := utils.DrinkMilk(startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if parts[1] == "diaper" {
 			Textsummarysum := utils.Diaper(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if parts[1] == "history-diaper" {
 			Textsummarysum := utils.HistoryDiaper(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if parts[1] == "sleep-daily" {
 			Textsummarysum := utils.SleepDaily(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if strings.Contains(userMsg, "takeabath") {
 			Textsummarysum := utils.Takeabath(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if strings.Contains(userMsg, "pumpmilk-daily") {
 			Textsummarysum := utils.PumpmilkDaily(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if strings.Contains(userMsg, "history-pumpmilk") {
 			Textsummarysum := utils.HistoryPumpmilk(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else if strings.Contains(userMsg, "stock") {
 			Textsummarysum := utils.Stockmilk(startOfMonth, endOfMonth, startOfDay, endOfDay, today)
-			return Reply(bot, replyToken, Textsummarysum)
+			return utils.Reply(bot, replyToken, Textsummarysum)
 		} else {
-			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
+			return utils.Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ")
 		}
-
-	} else if strings.Contains(userMsg, "datetimepicker") {
-
-		json := utils.DateTimePicker()
-		return utils.ReplyFlexMessage(json, bot, replyToken)
 
 	} else if strings.Contains(userMsg, "drinkmilk") ||
 		strings.Contains(userMsg, "pampers") ||
@@ -138,9 +136,9 @@ func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg
 			ActityValue: parts[1],
 			ReplyToken:  replyToken,
 		}
-		initializers.DB.Create(&activity)
-		stringReturn := utils.Recorod(activity, userMsg, replyToken)
-		return Reply(bot, replyToken, stringReturn)
+		// initializers.DB.Create(&activity)
+
+		return  utils.Record(activity, userMsg, replyToken,bot)
 	} else {
 		parts := strings.Split(userMsg, " ")
 		act_id, _ := strconv.Atoi(parts[1])
@@ -148,35 +146,12 @@ func ReplyMessage(bot *messaging_api.MessagingApiAPI, replyToken string, userMsg
 
 			initializers.DB.Delete(&models.Activities{}, act_id)
 
-			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ลบข้อมูลให้แล้วงับบบ")
+			return utils.Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ลบข้อมูลให้แล้วงับบบ")
 		} else {
 
-			return Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ---")
+			return utils.Reply(bot, replyToken, "'"+userMsg+"'  น้องวา- ไม่เข้าใจ งับบบบ---")
 		}
 	}
-}
-
-func Reply(bot *messaging_api.MessagingApiAPI, replyToken string, message string) (*messaging_api.ReplyMessageResponse, error) {
-	replyMessageResponse, err := bot.ReplyMessage(
-		&messaging_api.ReplyMessageRequest{
-			ReplyToken: replyToken,
-			Messages: []messaging_api.MessageInterface{
-				messaging_api.TextMessage{
-					Text: message,
-				},
-			},
-		})
-	return replyMessageResponse, err
-}
-
-type resultSumFloat struct {
-	Sum float32
-}
-type resultSum struct {
-	Sum int
-}
-type resultCount struct {
-	Count int
 }
 
 type FlexMessageWrapper struct {

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/line/line-bot-sdk-go/linebot"
@@ -524,34 +525,7 @@ func ReturnFlexMessage() string {
 }`
 }
 
-func GetIcon(activity_type string, activity_value string) string {
-	var icon string
-	if activity_type == "pampers" {
-		if activity_value == "pee" {
-			icon = "💦"
-		} else {
-			icon = "💩"
-		}
-	} else if activity_type == "drinkmilk" {
-		icon = "🍼 " + activity_value
-	} else if activity_type == "sleep" {
-		icon = "💤 sleep"
-	} else if activity_type == "wakeup" {
-		icon = "💤 wake"
-	} else if activity_type == "takeabath" {
-		icon = "🛁"
-	} else if activity_type == "pumpmilk" {
-		icon = "⛽ " + activity_value
-	} else if activity_type == "milkmilk" {
-		icon = "🤱🏻"
-	} else if activity_type == "stockmilk" {
-		icon = "📦 " + activity_value
-	} else {
-		icon = activity_type
-	}
 
-	return icon
-}
 
 func FlexMessageSummary() string {
 	return `{
@@ -861,21 +835,59 @@ func FlexMessageSummary() string {
 }`
 }
 
-func DateTimePicker() string {
-	return `{
-  "type": "action",
-  "contents": [
-    {
-      "type": "datetimepicker",
-      "label": "Select date",
-      "data": "storeId=12345",
-      "mode": "datetime",
-      "initial": "2017-12-25t00:00",
-      "max": "2018-01-24t23:59",
-      "min": "2017-12-25t00:00"
+func DateTimePicker(title string, data string, deleteID string) string {
+	return fmt.Sprintf(`{
+    "type": "bubble",
+    "body": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        
+        {
+          "type": "text",
+          "weight": "bold",
+          "size": "xl",
+          "text": "%s"
+        },
+        {
+          "type": "text",
+          "weight": "regular",
+          "size": "xs",
+          "text": "***Remark หากเป็นเวลาปัจจุบันไม่ต้องเลือก"
+        }
+      ]
+    },
+    "footer": {
+      "type": "box",
+      "layout": "vertical",
+      "spacing": "sm",
+      "contents": [
+        {
+          "type": "button",
+          "style": "link",
+          "height": "sm",
+          "action": {
+            "type": "datetimepicker",
+            "label": "แก้ไข วัน เวลา",
+            "mode": "datetime",
+            "data": "%s",
+            "color": "#ffdd00"
+          }
+        },
+        {
+          "type": "button",
+          "action": {
+            "type": "message",
+            "label": "ลบ กดผิด",
+            "text": "%s"
+          },
+          "height": "sm",
+          "color": "#EF4455"
+        }
+      ],
+      "flex": 0
     }
-  ]
-}`
+  }`, title, data, deleteID)
 }
 
 type FlexMessageWrapper struct {
