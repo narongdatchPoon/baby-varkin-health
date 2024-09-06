@@ -62,7 +62,7 @@ func HandlePostbackEvent(event webhook.PostbackEvent, bot *messaging_api.Messagi
 		var getActivity models.Activities
 		initializers.DB.Where("reply_token = ?", getReplyToken).First(&getActivity)
 		dateFormat := "2006-01-02T15:04:05"
-		selectedDatetimeStr := event.Postback.Params["datetime"]
+		selectedDatetimeStr := event.Postback.Params["datetime"] + ":00"
 		selectedDatetime, err := time.Parse(dateFormat, selectedDatetimeStr)
 		if err != nil {
 			log.Printf("Error parsing datetime: %v", err)
