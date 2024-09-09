@@ -67,6 +67,10 @@ func HandlePostbackEvent(event webhook.PostbackEvent, bot *messaging_api.Messagi
 		if err != nil {
 			log.Printf("Error parsing datetime: %v", err)
 			selectedDatetime = time.Time{} // or use a default value
+		} else {
+			// Subtract 7 hours from the parsed time
+			selectedDatetime = selectedDatetime.UTC()
+			selectedDatetime = selectedDatetime.Add(-7 * time.Hour)
 		}
 		getActivity.CreatedAt = selectedDatetime
 		initializers.DB.Updates(&getActivity)

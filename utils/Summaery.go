@@ -33,7 +33,7 @@ func HistoryAll(today string) string {
 
 	// Sort by ID if needed
 	sort.Slice(historyAll, func(i, j int) bool {
-		return historyAll[i].ID < historyAll[j].ID
+		return historyAll[i].CreatedAt.Before(historyAll[j].CreatedAt)
 	})
 	for _, activity := range historyAll {
 		icon := GetIcon(activity.ActityType, activity.ActityValue)

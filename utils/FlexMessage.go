@@ -443,50 +443,6 @@ func ReturnFlexMessage() string {
             "type": "button",
             "action": {
               "type": "message",
-              "label": "0.5 ออนซ์",
-              "text": "stockmilk 0.5"
-            },
-            "margin": "xs",
-            "height": "sm",
-            "style": "primary"
-          },
-          {
-            "type": "button",
-            "action": {
-              "type": "message",
-              "label": "1 ออนซ์",
-              "text": "stockmilk 1"
-            },
-            "margin": "xs",
-            "height": "sm",
-            "style": "primary"
-          },
-          {
-            "type": "button",
-            "action": {
-              "type": "message",
-              "label": "2 ออนซ์",
-              "text": "stockmilk 2"
-            },
-            "margin": "xs",
-            "height": "sm",
-            "style": "primary"
-          },
-          {
-            "type": "button",
-            "action": {
-              "type": "message",
-              "label": "3 ออนซ์",
-              "text": "stockmilk 3"
-            },
-            "margin": "xs",
-            "height": "sm",
-            "style": "primary"
-          },
-          {
-            "type": "button",
-            "action": {
-              "type": "message",
               "label": "4 ออนซ์",
               "text": "stockmilk 4"
             },
@@ -515,6 +471,28 @@ func ReturnFlexMessage() string {
             "margin": "xs",
             "height": "sm",
             "style": "primary"
+          },
+          {
+            "type": "button",
+            "action": {
+              "type": "message",
+              "label": "7 ออนซ์",
+              "text": "stockmilk 7"
+            },
+            "margin": "xs",
+            "height": "sm",
+            "style": "primary"
+          },
+          {
+            "type": "button",
+            "action": {
+              "type": "message",
+              "label": "8 ออนซ์",
+              "text": "stockmilk 8"
+            },
+            "margin": "xs",
+            "height": "sm",
+            "style": "primary"
           }
         ],
         "spacing": "sm",
@@ -524,8 +502,6 @@ func ReturnFlexMessage() string {
   ]
 }`
 }
-
-
 
 func FlexMessageSummary() string {
 	return `{
